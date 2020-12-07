@@ -8,28 +8,34 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = "MainActivity";
+    private final String KEY_INDEX = "index";
     private Button mTrueButton;
     private Button mFalseButton;
     private Button mNextButton;
     private TextView mQuestionTextView;
-    private Question[] mQuestionBank = {
-            new Question(R.string.question_australia, true),
-            new Question(R.string.question_oceans, true),
-            new Question(R.string.question_mideast, false),
-            new Question(R.string.question_africa, false),
-            new Question(R.string.question_americas, true),
-            new Question(R.string.question_asia, true)
-    };
-    private int mCurrentIndex = 0;
+
+    private QuizViewModel mQuizViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate(Bundle) called");
         setContentView(R.layout.activity_main);
+
+        ViewModelProvider provider = ViewModelProviders.of(this);
+        mQuizViewModel = provider.get(QuizViewModel.class);
+        Log.d(TAG, "Got a QuizViewModel: $quizViewModel");
+
+        if (savedInstanceState != null) {
+            mQuizViewModel.mCurrentIndex = savedInstanceState.getInt(KEY_INDEX, 0);
+        } else {
+            mQuizViewModel.mCurrentIndex = 0;
+        }
 
         mTrueButton = (Button) findViewById(R.id.true_button);
         mFalseButton = (Button) findViewById(R.id.false_button);
@@ -56,20 +62,27 @@ public class MainActivity extends AppCompatActivity {
         mNextButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCurrentIndex = (mCurrentIndex + 1) % mQuestionBank.length;
-                int questionTextResId = mQuestionBank[mCurrentIndex].getTextResId();
-                mQuestionTextView.setText(questionTextResId);
+
+                mQuizViewModel.moveToNext();
+
                 updateQuestion();
 
             }
         });
 
-        int questionTextResId = mQuestionBank[mCurrentIndex].getTextResId();
-        mQuestionTextView.setText(questionTextResId);
+
         updateQuestion();
 
 
     }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        Log.i(TAG, "onSaveInstanceState");
+        savedInstanceState.putInt(KEY_INDEX, mQuizViewModel.mCurrentIndex);
+    }
+
     @Override
     public void onStart() {
         super.onStart();
@@ -98,12 +111,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
         private void updateQuestion() {
-        int questionTextResId = mQuestionBank[mCurrentIndex].getTextResId();
-        mQuestionTextView.setText(questionTextResId);
+
+            int questionTextResId = mQuizViewModel.currentQuestionText();
+
+            mQuestionTextView.setText(questionTextResId);
 
     }
     private void checkAnswer(boolean answer) {
-        boolean correctAnswer = mQuestionBank[mCurrentIndex].isAnswer();
+
+        boolean correctAnswer = mQuizViewModel.currentQuestionAnswer();
         if (answer == correctAnswer) {
             Toast.makeText(this, R.string.correct_toast, Toast.LENGTH_SHORT).show();
         } else {
